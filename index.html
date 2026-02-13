@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>Mint Audio Visualizer</title>
+    <style>
+        html, body {
+          margin: 0;
+          height: 100%;
+          background-color: #000;
+          overflow: hidden;
+        }
+        canvas {
+          display: block;
+          width: 100%;
+          height: 100%;
+        }
+        #fileInput {
+          color: white;
+          position: absolute;
+          top: 20px;
+          left: 20px;
+          z-index: 10;
+        }
+    </style>
+</head>
+<body>
+    <input type="file" id="fileInput" accept="audio/mp3">
+    <canvas id="visualizer"></canvas>
+
+    <script>
+        const fileInput = document.getElementById('fileInput');
+        const canvas = document.getElementById('visualizer');
+        const ctx = canvas.getContext('2d');
+        let audioCtx, analyser, source, dataArray, bufferLength;
+
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+
+        fileInput.addEventListener('change', function() {
+            const file = this.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                initAudio(e.target.result);
+            }
+            reader.readAsArrayBuffer(file);
+        });
+
+        function initAudio(arrayBuffer) {
+            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            audioCtx.decodeAudioData(arrayBuffer, function(buffer) {
+                source = audioCtx.createBufferSource();
+                source.buffer = buffer;
+
+                analyser = audioCtx.createAnalyser();
+
+                const isMobile = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+                analyser.fftSize = isMobile ? 256 : 1024;
+
+                bufferLength = analyser.frequencyBinCount;
+                dataArray = new Uint8Array(bufferLength);
+
+                source.connect(analyser);
+                analyser.connect(audioCtx.destination);
+
+                source.start();
+                draw();
+            });
+        }
+
+        function draw() {
+            requestAnimationFrame(draw);
+
+            analyser.getByteFrequencyData(dataArray);
+
+            ctx.fillStyle = '#000';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            const barWidth = (canvas.width / bufferLength) * 2.5;
+            let x = 0;
+
+            for (let i = 0; i < bufferLength; i++) {
+                let barHeight = dataArray[i];
+
+                const threshold = 5;
+                if (barHeight < threshold) {
+                    barHeight = 0;
+                } else {
+                    const scale = canvas.height / 300;
+                    barHeight = barHeight * scale;
+                }
+
+                ctx.fillStyle = 'hsl(160, 100%, 50%)';
+                if (barHeight > 0) {
+                    ctx.fillRect(x, canvas.height - barHeight, barWidth, barHeight);
+                }
+                x += barWidth + 1;
+            }
+        }
+
+        window.addEventListener('resize', () => {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        });
+    </script>
+</body>
+</html>
