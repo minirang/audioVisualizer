@@ -49,13 +49,18 @@
             reader.readAsArrayBuffer(file);
         });
 
-        function initAudio(arrayBuffer) {
+        function initAudio(arrayBuffer)
+            if (source) {
+                source.stop();
+                source.disconnect();
+            }
             audioCtx = new (window.AudioContext || window.webkitAudioContext)();
             audioCtx.decodeAudioData(arrayBuffer, function(buffer) {
                 source = audioCtx.createBufferSource();
                 source.buffer = buffer;
 
                 analyser = audioCtx.createAnalyser();
+                analyser.smoothingTimeConstant = 0.8;
 
                 const isMobile = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
                 analyser.fftSize = isMobile ? 256 : 1024;
@@ -89,8 +94,9 @@
                 if (barHeight < threshold) {
                     barHeight = 0;
                 } else {
-                    const scale = canvas.height / 300;
-                    barHeight = barHeight * scale;
+                    const maxHeight = canvas.height * 0.9;
+                    const scale = maxHeight / 255;
+                    barHeight = dataArray[i] * scale;
                 }
 
                 ctx.fillStyle = 'hsl(160, 100%, 50%)';
