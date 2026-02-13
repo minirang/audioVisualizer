@@ -49,7 +49,7 @@
             reader.readAsArrayBuffer(file);
         });
 
-        function initAudio(arrayBuffer)
+        function initAudio(arrayBuffer) {
             if (source) {
                 source.stop();
                 source.disconnect();
